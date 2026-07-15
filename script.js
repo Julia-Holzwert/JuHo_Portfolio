@@ -72,25 +72,25 @@ function getProjectYear(project) {
 function normalizeProjectType(value) {
   const cleanValue = safeText(value).trim().toLowerCase();
 
-  if (["group", "group project", "group-project", "team", "team project"].includes(cleanValue)) return "Group Project";
-  if (["private", "private project", "solo", "solo project", "independent", "independent project"].includes(cleanValue)) return "Private";
+  if (["group", "group project", "group-project", "team", "team project"].includes(cleanValue)) return "Team Project";
+  if (["private", "private project", "solo", "solo project", "independent", "independent project", "independent concept"].includes(cleanValue)) return "Independent Project";
 
   return "";
 }
 
 function getProjectLevel(project) {
-  if (!project) return "Private";
+  if (!project) return "Independent Project";
 
   const explicitType = normalizeProjectType(project.level || project.archiveLevel || project.type || project.projectLevel || project.archiveType);
   if (explicitType) return explicitType;
 
   const categories = project.categories || [];
-  if (categories.includes("Group-Project") || categories.includes("Group Project")) return "Group Project";
+  if (categories.includes("Group-Project") || categories.includes("Group Project") || categories.includes("Team Project")) return "Team Project";
 
   const meta = safeText(project.detail && project.detail.meta).toLowerCase();
-  if (meta.includes("group project")) return "Group Project";
+  if (meta.includes("group project") || meta.includes("team project")) return "Team Project";
 
-  return "Private";
+  return "Independent Project";
 }
 
 function getProjectPreviewSrc(project, base = getBasePath()) {
@@ -119,6 +119,86 @@ function getProjectTagList(project) {
   ];
 
   return Array.from(new Set(values.map(value => safeText(value).trim()).filter(Boolean)));
+}
+
+
+function getProjectHeaderTags(project) {
+  return Array.from(
+    new Set(
+      (project.categories || [])
+        .map(value => safeText(value).trim())
+        .filter(value => value && value !== "Group-Project" && value !== "Group Project")
+    )
+  ).slice(0, 4);
+}
+
+function getProjectDuration(project) {
+  const detail = project.detail || {};
+  const explicitDuration = detail.duration || project.duration;
+  if (!isBlank(explicitDuration)) return safeText(explicitDuration).trim();
+
+  const meta = safeText(detail.meta);
+  const match = meta.match(/\b(?:for|over)\s+(\d+(?:[.,]\d+)?\s*(?:days?|weeks?|months?|years?))\b/i)
+    || meta.match(/\b(\d+(?:[.,]\d+)?\s*(?:days?|weeks?|months?|years?))\b/i);
+
+  return match ? match[1].trim() : "";
+}
+
+function getProjectMetaItems(project) {
+  const detail = project.detail || {};
+  const structuredMeta = detail.metaItems || project.metaItems;
+  const items = [];
+
+  function formatValue(value) {
+    if (Array.isArray(value)) {
+      return value.map(item => safeText(item).trim()).filter(Boolean).join(", ");
+    }
+    return safeText(value).trim();
+  }
+
+  function addItem(label, value) {
+    const cleanLabel = safeText(label).trim();
+    const cleanValue = formatValue(value);
+    if (!cleanLabel || !cleanValue) return;
+
+    const duplicate = items.some(item => item.label === cleanLabel && item.value === cleanValue);
+    if (!duplicate) items.push({ label: cleanLabel, value: cleanValue });
+  }
+
+  if (Array.isArray(structuredMeta)) {
+    structuredMeta.forEach(item => {
+      if (item && typeof item === "object") addItem(item.label || item.name, item.value || item.text);
+    });
+  } else if (structuredMeta && typeof structuredMeta === "object") {
+    Object.entries(structuredMeta).forEach(([label, value]) => addItem(label, value));
+  }
+
+  if (!items.length) {
+    addItem("Year", getProjectYear(project));
+    addItem("Type", getProjectLevel(project));
+    addItem("Duration", getProjectDuration(project));
+    addItem("Role", detail.role || project.role);
+    addItem("Team", detail.team || project.team);
+    addItem("Methods", detail.methods || project.methods);
+    addItem("Ownership", detail.ownership || project.ownership);
+  }
+
+  if (!items.length && !isBlank(detail.meta)) addItem("Project", detail.meta);
+  return items;
+}
+
+function getProjectCoverScale(project) {
+  const explicitScale = Number(project.coverScale || project.introCoverScale);
+  if (Number.isFinite(explicitScale) && explicitScale > 0) return explicitScale;
+
+  const coverZoom = Number(project.coverZoom);
+  if (Number.isFinite(coverZoom) && coverZoom !== 0) return Math.max(0.1, 1 + coverZoom / 100);
+
+  const imageScale = Number(project.imageScale);
+  if (Number.isFinite(imageScale) && imageScale > 0) return imageScale;
+
+  if (Number.isFinite(coverZoom)) return 1;
+  return 1;
 }
 
 function getUniqueProjectValues(projects, getter) {
@@ -244,7 +324,7 @@ function renderArchiveFilters(projects) {
   const categories = getUniqueProjectValues(projects, project => project.categories || []).filter(category => category !== "Group-Project").sort((a, b) => a.localeCompare(b));
   inner.appendChild(reset);
   appendArchiveYearToggle(inner);
-  appendArchiveFilterGroup(inner, "Project Type", "category", categories, "All Types");
+  appendArchiveFilterGroup(inner, "Discipline", "category", categories, "All disciplines");
   appendArchiveTypeToggle(inner);
 
   filterSection.appendChild(inner);
@@ -258,39 +338,39 @@ function appendArchiveTypeToggle(root) {
 
   const heading = document.createElement("p");
   heading.className = "archive-filter-label";
-  heading.textContent = "Mode";
+  heading.textContent = "Project Type";
 
   const toggle = document.createElement("div");
   toggle.className = "archive-type-toggle";
   toggle.dataset.typeState = "all";
 
-  const privateButton = document.createElement("button");
-  privateButton.className = "archive-type-option archive-type-option-private";
-  privateButton.type = "button";
-  privateButton.dataset.filterGroup = "level";
-  privateButton.dataset.filterValue = "Private";
-  privateButton.dataset.filter = "Private";
-  privateButton.textContent = "Private";
+  const independentButton = document.createElement("button");
+  independentButton.className = "archive-type-option archive-type-option-independent";
+  independentButton.type = "button";
+  independentButton.dataset.filterGroup = "level";
+  independentButton.dataset.filterValue = "Independent Project";
+  independentButton.dataset.filter = "Independent Project";
+  independentButton.textContent = "Independent";
 
   const switchButton = document.createElement("button");
   switchButton.className = "archive-type-switch";
   switchButton.type = "button";
   switchButton.dataset.typeToggle = "";
-  switchButton.setAttribute("aria-label", "Switch between Private and Group Project");
+  switchButton.setAttribute("aria-label", "Switch between independent and team projects");
   switchButton.setAttribute("aria-pressed", "false");
   switchButton.innerHTML = '<span class="archive-type-knob" aria-hidden="true"></span>';
 
-  const groupButton = document.createElement("button");
-  groupButton.className = "archive-type-option archive-type-option-group";
-  groupButton.type = "button";
-  groupButton.dataset.filterGroup = "level";
-  groupButton.dataset.filterValue = "Group Project";
-  groupButton.dataset.filter = "Group Project";
-  groupButton.textContent = "Group Project";
+  const teamButton = document.createElement("button");
+  teamButton.className = "archive-type-option archive-type-option-team";
+  teamButton.type = "button";
+  teamButton.dataset.filterGroup = "level";
+  teamButton.dataset.filterValue = "Team Project";
+  teamButton.dataset.filter = "Team Project";
+  teamButton.textContent = "Team";
 
-  toggle.appendChild(privateButton);
+  toggle.appendChild(independentButton);
   toggle.appendChild(switchButton);
-  toggle.appendChild(groupButton);
+  toggle.appendChild(teamButton);
 
   block.appendChild(heading);
   block.appendChild(toggle);
@@ -369,20 +449,44 @@ function debounce(fn, delay = 160) {
 function loadFooter() {
   if (qs(".footer-section")) return;
 
+  const base = getBasePath();
   const footer = document.createElement("footer");
   footer.className = "footer-section";
 
   const particles = document.createElement("div");
   particles.className = "gooey-animations";
   particles.id = "particle-container";
+  particles.setAttribute("aria-hidden", "true");
 
   const content = document.createElement("div");
   content.className = "footer-content";
 
+  const availability = document.createElement("p");
+  availability.className = "footer-availability";
+  availability.textContent = "Available for internships, junior roles and collaborations.";
+
+  const links = document.createElement("nav");
+  links.className = "footer-links";
+  links.setAttribute("aria-label", "Footer links");
+  links.innerHTML = `
+    <a href="mailto:julia.h.great@gmail.com">Contact</a>
+    <a href="https://www.linkedin.com/in/julia-holzwert/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    <a href="${base}Lebenslauf-18.03.pdf" target="_blank" rel="noopener noreferrer">CV</a>
+    <a href="#top" data-footer-top>Back to top</a>
+  `;
+
   const text = document.createElement("p");
   text.className = "footer-text";
-  text.innerHTML = "2026 Copyright Julia Holzwert<br>Content is not to be used<br>for training generative AI technologies without explicit permission.";
+  text.innerHTML = "© 2026 Julia Holzwert<br>Content may not be used to train generative AI systems without explicit permission.";
 
+  links.querySelector("[data-footer-top]")?.addEventListener("click", event => {
+    event.preventDefault();
+    if (lenis && !prefersReducedMotion) lenis.scrollTo(0, { duration: 1.2 });
+    else window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+  });
+
+  content.appendChild(availability);
+  content.appendChild(links);
   content.appendChild(text);
   footer.appendChild(particles);
   footer.appendChild(content);
@@ -402,16 +506,19 @@ function loadNavbar() {
         <nav class="nav-left" aria-label="Primary navigation">
           <a href="${base}index.html">Home</a>
           <a href="${base}projects.html">Works</a>
+          <a href="${base}about.html">About</a>
         </nav>
 
         <div class="nav-center"></div>
 
-        <nav class="nav-right" aria-label="External links and theme">
+        <nav class="nav-right" aria-label="Profile links and theme">
+          <a href="${base}Lebenslauf-18.03.pdf" target="_blank" rel="noopener noreferrer">CV</a>
           <a href="https://www.linkedin.com/in/julia-holzwert/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a href="mailto:julia.h.great@gmail.com">Contact</a>
 
           <div class="theme-toggle">
-            <input type="checkbox" id="darkmode-toggle" />
-            <label for="darkmode-toggle" class="toggle-label" aria-label="Toggle dark mode">
+            <input type="checkbox" id="darkmode-toggle" aria-label="Use dark mode" />
+            <label for="darkmode-toggle" class="toggle-label" aria-hidden="true">
               <svg class="sun" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <circle cx="32" cy="32" r="15" />
                 <path d="M32 0v10M32 54v10M0 32h10M54 32h10M9.4 9.4l7.1 7.1M47.5 47.5l7.1 7.1M54.6 9.4l-7.1 7.1M16.5 47.5l-7.1 7.1" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
@@ -432,16 +539,18 @@ function loadNavbar() {
       </div>
     </header>
 
-    <div class="mobile-menu-full" id="mobileMenuFull" aria-hidden="true">
+    <div class="mobile-menu-full" id="mobileMenuFull" role="dialog" aria-modal="true" aria-label="Site navigation" aria-hidden="true">
       <button class="menu-close" id="menuClose" type="button" aria-label="Close navigation">×</button>
       <nav class="menu-block menu-top" aria-label="Mobile navigation">
         <a href="${base}index.html">Home</a>
         <a href="${base}projects.html">Works</a>
-
+        <a href="${base}about.html">About</a>
       </nav>
       <div class="menu-separator" aria-hidden="true"></div>
-      <nav class="menu-block" aria-label="Mobile external links">
+      <nav class="menu-block" aria-label="Mobile profile links">
+        <a href="${base}Lebenslauf-18.03.pdf" target="_blank" rel="noopener noreferrer">CV</a>
         <a href="https://www.linkedin.com/in/julia-holzwert/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        <a href="mailto:julia.h.great@gmail.com">Contact</a>
       </nav>
     </div>
   `;
@@ -501,6 +610,12 @@ function initMobileMenu() {
 
   if (!burger || !mobileMenuFull || !menuClose) return;
 
+  const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  function getFocusableItems() {
+    return qsa(focusableSelector, mobileMenuFull).filter(item => !item.hidden && item.offsetParent !== null);
+  }
+
   function openMenu() {
     mobileMenuFull.classList.add("open");
     mobileMenuFull.setAttribute("aria-hidden", "false");
@@ -509,23 +624,48 @@ function initMobileMenu() {
     menuClose.focus();
   }
 
-  function closeMenu() {
+  function closeMenu({ restoreFocus = true } = {}) {
     mobileMenuFull.classList.remove("open");
     mobileMenuFull.setAttribute("aria-hidden", "true");
     burger.setAttribute("aria-expanded", "false");
     document.body.classList.remove("is-mobile-menu-open");
-    burger.focus();
+    if (restoreFocus) burger.focus();
   }
 
   burger.addEventListener("click", openMenu);
-  menuClose.addEventListener("click", closeMenu);
+  menuClose.addEventListener("click", () => closeMenu());
 
   qsa("a", mobileMenuFull).forEach(link => {
-    link.addEventListener("click", closeMenu);
+    link.addEventListener("click", () => closeMenu({ restoreFocus: false }));
   });
 
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && mobileMenuFull.classList.contains("open")) closeMenu();
+    if (!mobileMenuFull.classList.contains("open")) return;
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu();
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+    const focusable = getFocusableItems();
+    if (!focusable.length) {
+      event.preventDefault();
+      menuClose.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   });
 }
 
@@ -670,42 +810,61 @@ function renderOtherProjects() {
 
   const currentCategories = currentProject.categories || [];
   const base = getBasePath();
+  const priority = new Map([
+    ["headsup", 1],
+    ["dbnavigatorredesign", 2],
+    ["spatialto-do", 3],
+    ["bodique", 4],
+    ["campustalk", 5]
+  ]);
 
-  const relatedProjects = projects.filter(project => {
-    const isCurrentProject = normalizeSlug(project.slug) === normalizeSlug(currentSlug);
-    const sharesCategory = (project.categories || []).some(category => currentCategories.includes(category));
-    return !isCurrentProject && sharesCategory;
-  });
+  const candidates = projects
+    .filter(project => normalizeSlug(project.slug) !== normalizeSlug(currentSlug))
+    .map((project, index) => ({ project, index }));
 
-  const fallbackProjects = projects.filter(project => normalizeSlug(project.slug) !== normalizeSlug(currentSlug));
-  let selectedProjects = shuffleArray(relatedProjects).slice(0, 4);
+  const sameCategory = candidates
+    .filter(({ project }) => (project.categories || []).some(category => currentCategories.includes(category)))
+    .sort((a, b) => a.index - b.index);
 
-  if (selectedProjects.length < 4) {
-    const selectedSlugs = selectedProjects.map(project => normalizeSlug(project.slug));
-    const extraProjects = shuffleArray(fallbackProjects).filter(project => !selectedSlugs.includes(normalizeSlug(project.slug)));
-    selectedProjects = [...selectedProjects, ...extraProjects].slice(0, 4);
+  const rankedCurrent = candidates
+    .slice()
+    .sort((a, b) => {
+      const rankA = priority.get(normalizeSlug(a.project.slug)) || 99;
+      const rankB = priority.get(normalizeSlug(b.project.slug)) || 99;
+      if (rankA !== rankB) return rankA - rankB;
+      const yearDiff = Number(getProjectYear(b.project) || 0) - Number(getProjectYear(a.project) || 0);
+      return yearDiff || a.index - b.index;
+    });
+
+  const differentCategory = rankedCurrent.filter(({ project }) =>
+    !(project.categories || []).some(category => currentCategories.includes(category))
+  );
+
+  const selectedProjects = [];
+  const selectedSlugs = new Set();
+
+  function addProject(project) {
+    if (!project || selectedProjects.length >= 4) return;
+    const slug = normalizeSlug(project.slug);
+    if (selectedSlugs.has(slug)) return;
+    selectedSlugs.add(slug);
+    selectedProjects.push(project);
   }
+
+  sameCategory.slice(0, 2).forEach(({ project }) => addProject(project));
+  rankedCurrent.forEach(({ project }) => {
+    if (selectedProjects.length < 3) addProject(project);
+  });
+  differentCategory.forEach(({ project }) => addProject(project));
+  rankedCurrent.forEach(({ project }) => addProject(project));
 
   removeChildren(grid);
   const fragment = document.createDocumentFragment();
-
-  selectedProjects.forEach(project => {
-    fragment.appendChild(createProjectCard(project, base));
-  });
-
+  selectedProjects.slice(0, 4).forEach(project => fragment.appendChild(createProjectCard(project, base)));
   grid.appendChild(fragment);
 }
 
-function shuffleArray(array) {
-  const copy = [...array];
 
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-
-  return copy;
-}
 
 /* PROJECT DETAIL */
 function renderProjectDetail() {
@@ -724,6 +883,7 @@ function renderProjectDetail() {
   document.body.dataset.currentProject = safeText(project.title);
   document.body.dataset.currentFilters = (project.categories || []).join("|");
 
+  ensureProjectIntroComposition();
   renderProjectHeader(project);
   renderProjectCover(project);
   renderProjectViewToggle(project);
@@ -739,30 +899,32 @@ function isDbEditorialProject(project) {
   return hasEditorialProject(project);
 }
 
-function getProjectViewModeKey(project) {
-  return `projectViewMode:${normalizeSlug(project.slug)}`;
-}
-
 function getProjectViewMode(project) {
   if (!isDbEditorialProject(project)) return "detail";
 
+  const activeMode = safeText(document.body.dataset.projectView).toLowerCase();
+  if (activeMode === "detail" || activeMode === "editorial") return activeMode;
+
   try {
-    const savedMode = sessionStorage.getItem(getProjectViewModeKey(project));
-    if (savedMode === "detail" || savedMode === "editorial") return savedMode;
+    const requestedMode = new URL(window.location.href).searchParams.get("view");
+    if (requestedMode === "detail" || requestedMode === "editorial") return requestedMode;
   } catch (error) {
-    warnLog("Could not read project view mode");
+    warnLog("Could not read project view from the URL");
   }
 
-  return "editorial";
+  const preferredMode = safeText(project.defaultView || (project.detail && project.detail.defaultView)).toLowerCase();
+  return preferredMode === "detail" ? "detail" : "editorial";
 }
 
 function setProjectViewMode(project, mode) {
   const nextMode = mode === "detail" ? "detail" : "editorial";
 
   try {
-    sessionStorage.setItem(getProjectViewModeKey(project), nextMode);
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", nextMode);
+    window.history.replaceState(window.history.state, "", url);
   } catch (error) {
-    warnLog("Could not save project view mode");
+    warnLog("Could not update project view in the URL");
   }
 
   return nextMode;
@@ -806,278 +968,336 @@ function renderProjectViewToggle(project) {
     return;
   }
 
-  const introCopy = qs(".project-intro-copy");
-  const introContainer = qs(".intro-container");
-  const target = introCopy || introContainer;
-  if (!target) return;
+  const composition = ensureProjectIntroComposition();
+  if (!composition) return;
 
-  let button = document.getElementById("projectViewToggle");
+  const detailSection = qs(".project-detail-section");
+  if (detailSection) {
+    detailSection.id = detailSection.id || "projectDetailView";
+    detailSection.setAttribute("role", "tabpanel");
+    detailSection.setAttribute("aria-labelledby", "projectViewDetail");
+  }
 
-  if (!button) {
-    button = document.createElement("button");
-    button.type = "button";
-    button.id = "projectViewToggle";
-    button.className = "project-view-toggle hero-contact-button";
+  const editorialSection = ensureCaseStorySection();
+  if (editorialSection) {
+    editorialSection.setAttribute("role", "tabpanel");
+    editorialSection.setAttribute("aria-labelledby", "projectViewEditorial");
+  }
 
-    const text = document.createElement("span");
-    text.className = "hero-contact-text project-view-toggle-text";
+  let switcher = document.getElementById("projectViewToggle");
 
-    const arrow = document.createElement("span");
-    arrow.className = "hero-contact-arrow";
-    arrow.setAttribute("aria-hidden", "true");
-    arrow.textContent = "→";
+  if (!switcher) {
+    switcher = document.createElement("div");
+    switcher.id = "projectViewToggle";
+    switcher.className = "project-view-switcher";
 
-    ["corner-tl", "corner-tr", "corner-bl", "corner-br"].forEach(position => {
-      const corner = document.createElement("span");
-      corner.className = `hero-contact-corner ${position}`;
-      corner.setAttribute("aria-hidden", "true");
-      button.appendChild(corner);
-    });
+    const label = document.createElement("span");
+    label.className = "project-view-label";
+    label.textContent = "Project view";
 
-    button.appendChild(text);
-    button.appendChild(arrow);
+    const status = document.createElement("span");
+    status.className = "project-view-status";
+    status.setAttribute("aria-live", "polite");
+    status.setAttribute("aria-atomic", "true");
 
-    button.addEventListener("click", () => {
-      const currentMode = getProjectViewMode(project);
-      const nextMode = currentMode === "editorial" ? "detail" : "editorial";
+    const options = document.createElement("div");
+    options.className = "project-view-options";
+    options.setAttribute("role", "tablist");
+    options.setAttribute("aria-label", "Choose project view");
+
+    const editorialButton = document.createElement("button");
+    editorialButton.type = "button";
+    editorialButton.id = "projectViewEditorial";
+    editorialButton.className = "project-view-option";
+    editorialButton.dataset.projectViewMode = "editorial";
+    editorialButton.setAttribute("role", "tab");
+    editorialButton.setAttribute("aria-controls", "caseStory");
+    editorialButton.textContent = "Editorial";
+
+    const detailButton = document.createElement("button");
+    detailButton.type = "button";
+    detailButton.id = "projectViewDetail";
+    detailButton.className = "project-view-option";
+    detailButton.dataset.projectViewMode = "detail";
+    detailButton.setAttribute("role", "tab");
+    detailButton.setAttribute("aria-controls", detailSection ? detailSection.id : "projectDetailView");
+    detailButton.textContent = "Project details";
+
+    options.appendChild(editorialButton);
+    options.appendChild(detailButton);
+    switcher.appendChild(label);
+    switcher.appendChild(status);
+    switcher.appendChild(options);
+
+    function activateView(button, shouldFocus = false) {
+      const nextMode = button.dataset.projectViewMode;
+      if (!nextMode) return;
 
       setProjectViewMode(project, nextMode);
       renderProjectViewMode(project, nextMode);
+      if (shouldFocus) button.focus();
+    }
+
+    options.addEventListener("click", event => {
+      const button = event.target.closest("[data-project-view-mode]");
+      if (button) activateView(button);
+    });
+
+    options.addEventListener("keydown", event => {
+      const tabs = qsa("[role='tab']", options);
+      const currentIndex = tabs.indexOf(document.activeElement);
+      if (currentIndex < 0) return;
+
+      let nextIndex = currentIndex;
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (currentIndex + 1) % tabs.length;
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      if (event.key === "Home") nextIndex = 0;
+      if (event.key === "End") nextIndex = tabs.length - 1;
+
+      if (nextIndex === currentIndex) return;
+      event.preventDefault();
+      activateView(tabs[nextIndex], true);
     });
   }
 
-  if (button.parentNode !== target) {
-    target.appendChild(button);
-  }
-
+  if (switcher.parentNode !== composition.layout) composition.layout.appendChild(switcher);
   updateProjectViewToggle(project, getProjectViewMode(project));
 }
 
 function updateProjectViewToggle(project, mode) {
-  const button = document.getElementById("projectViewToggle");
-  if (!button || !isDbEditorialProject(project)) return;
+  const switcher = document.getElementById("projectViewToggle");
+  if (!switcher || !isDbEditorialProject(project)) return;
 
-  const text = qs(".project-view-toggle-text", button);
-  const arrow = qs(".hero-contact-arrow", button);
-  const isEditorial = mode === "editorial";
+  const nextMode = mode === "detail" ? "detail" : "editorial";
+  const status = qs(".project-view-status", switcher);
 
-  const targetLabel = isEditorial
-    ? "Projectdetails"
-    : "Editorial";
+  qsa("[data-project-view-mode]", switcher).forEach(button => {
+    const isSelected = button.dataset.projectViewMode === nextMode;
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-selected", String(isSelected));
+    button.tabIndex = isSelected ? 0 : -1;
+  });
 
-  if (text) text.textContent = targetLabel;
-  if (arrow) arrow.textContent = "→";
-
-  button.dataset.currentMode = mode;
-  button.setAttribute("aria-label", `Switch to ${targetLabel}`);
+  switcher.dataset.currentMode = nextMode;
+  if (status) status.textContent = nextMode === "editorial" ? "Editorial view active" : "Project details view active";
 }
 
 function removeProjectViewToggle() {
-  const button = document.getElementById("projectViewToggle");
-  if (button) button.remove();
+  const switcher = document.getElementById("projectViewToggle");
+  if (switcher) switcher.remove();
 }
+
 function renderProjectHeader(project) {
   const titleEl = document.getElementById("projectTitle");
   const tagsEl = document.getElementById("projectTags");
-  const metaEl = document.getElementById("projectMeta");
+  let metaEl = document.getElementById("projectMeta");
 
   if (titleEl) {
-    const titleText = safeText(project.title).trim();
-    const titleLength = titleText.length;
-    const wordCount = titleText.split(/\s+/).filter(Boolean).length;
-    const introBlock = qs(".intro-block");
-
-    titleEl.textContent = titleText;
-
-    titleEl.classList.remove(
-      "project-title-short",
-      "project-title-long",
-      "project-title-extra-long"
-    );
-
-    if (introBlock) {
-      introBlock.classList.remove(
-        "has-short-title",
-        "has-long-title",
-        "has-extra-long-title"
-      );
-    }
-
-    if (titleLength > 22 || wordCount >= 3) {
-      titleEl.classList.add("project-title-extra-long");
-      if (introBlock) introBlock.classList.add("has-extra-long-title");
-    } else if (titleLength > 12 || wordCount >= 2) {
-      titleEl.classList.add("project-title-long");
-      if (introBlock) introBlock.classList.add("has-long-title");
-    } else {
-      titleEl.classList.add("project-title-short");
-      if (introBlock) introBlock.classList.add("has-short-title");
-    }
+    titleEl.textContent = safeText(project.title).trim();
+    titleEl.classList.remove("project-title-short", "project-title-long", "project-title-extra-long");
   }
-  if (metaEl) metaEl.textContent = safeText(project.detail.meta);
+
+  if (metaEl && metaEl.tagName !== "DL") {
+    const replacement = document.createElement("dl");
+    replacement.id = "projectMeta";
+    replacement.className = `${metaEl.className || ""} project-meta-list`.trim();
+    metaEl.replaceWith(replacement);
+    metaEl = replacement;
+  }
+
+  if (metaEl) {
+    metaEl.classList.add("project-meta-list");
+    removeChildren(metaEl);
+
+    const items = getProjectMetaItems(project);
+    metaEl.hidden = !items.length;
+
+    items.forEach(item => {
+      const group = document.createElement("div");
+      group.className = "project-meta-item";
+
+      const term = document.createElement("dt");
+      term.textContent = item.label;
+
+      const description = document.createElement("dd");
+      description.textContent = item.value;
+
+      group.appendChild(term);
+      group.appendChild(description);
+      metaEl.appendChild(group);
+    });
+  }
 
   if (!tagsEl) return;
 
   removeChildren(tagsEl);
   const base = getBasePath();
-
-  const headerTags = getProjectTagList(project).slice(0, 3);
+  const headerTags = getProjectHeaderTags(project);
+  tagsEl.hidden = !headerTags.length;
 
   headerTags.forEach((tag, index) => {
     const link = document.createElement("a");
-    const isYear = /^\d{4}$/.test(tag);
-    const isLevel = tag === "Private" || tag === "Group Project";
-    const isProjectType = !isYear && !isLevel;
-
     link.className = "project-tag-filter";
     link.dataset.tagIndex = String(index + 1);
-
-    if (isLevel) {
-      link.href = `${base}projects.html?level=${encodeURIComponent(tag)}#filters`;
-      link.dataset.tagType = "level";
-    } else if (isYear) {
-      link.href = `${base}projects.html#filters`;
-      link.dataset.tagType = "year";
-    } else {
-      link.href = `${base}projects.html?filter=${encodeURIComponent(tag)}#filters`;
-      link.dataset.tagType = "project-type";
-    }
-
-    if (isProjectType) {
-      link.classList.add("is-active");
-      link.setAttribute("aria-current", "true");
-    }
-
+    link.dataset.tagType = "project-type";
+    link.href = `${base}projects.html?filter=${encodeURIComponent(tag)}#filters`;
+    link.setAttribute("aria-label", `View projects filtered by ${tag}`);
     link.textContent = tag;
     tagsEl.appendChild(link);
   });
 }
 
 function ensureProjectIntroComposition() {
-  const introBlock = qs(".intro-block")
-  if (!introBlock) return null
+  const introBlock = qs(".intro-block");
+  if (!introBlock) return null;
 
-  const introContainer = qs(".intro-container", introBlock)
-  if (!introContainer) return null
+  const introContainer = qs(".intro-container", introBlock);
+  if (!introContainer) return null;
 
-  introBlock.classList.add("project-intro-block")
+  introBlock.classList.add("project-intro-block");
 
-  let layout = qs(".project-intro-layout", introContainer)
-  let copy = qs(".project-intro-copy", introContainer)
-  let media = qs(".project-intro-media", introContainer)
+  let layout = qs(".project-intro-layout", introContainer);
+  let copy = qs(".project-intro-copy", introContainer);
+  let media = qs(".project-intro-media", introContainer);
 
   if (!layout) {
-    layout = document.createElement("div")
-    layout.className = "project-intro-layout"
-
-    copy = document.createElement("div")
-    copy.className = "project-intro-copy"
-
-    media = document.createElement("div")
-    media.className = "project-intro-media"
-
-    Array.from(introContainer.children).forEach(child => {
-      if (child.id !== "projectCoverBanner") {
-        copy.appendChild(child)
-      }
-    })
-
-    layout.appendChild(copy)
-    layout.appendChild(media)
-    introContainer.appendChild(layout)
+    layout = document.createElement("div");
+    layout.className = "project-intro-layout";
+    introContainer.insertBefore(layout, introContainer.firstChild);
   }
 
   if (!copy) {
-    copy = document.createElement("div")
-    copy.className = "project-intro-copy"
-    layout.insertBefore(copy, layout.firstChild)
+    copy = document.createElement("div");
+    copy.className = "project-intro-copy";
+    layout.insertBefore(copy, layout.firstChild);
   }
 
   if (!media) {
-    media = document.createElement("div")
-    media.className = "project-intro-media"
-    layout.appendChild(media)
+    media = document.createElement("div");
+    media.className = "project-intro-media";
+    layout.appendChild(media);
   }
 
-  return media
+  ["projectTitle", "projectTags", "projectMeta"].forEach(id => {
+    const element = document.getElementById(id);
+    if (element && element.parentNode !== copy) copy.appendChild(element);
+  });
+
+  const cover = document.getElementById("projectCoverBanner");
+  if (cover && cover.parentNode !== media) media.appendChild(cover);
+
+  introContainer.classList.add("is-composed");
+  return { introBlock, introContainer, layout, copy, media };
 }
 
 function renderProjectCover(project) {
-  const coverSlot = ensureProjectIntroComposition()
-  let coverBannerEl = document.getElementById("projectCoverBanner")
+  const composition = ensureProjectIntroComposition();
+  if (!composition) return;
 
-  if (!coverBannerEl && coverSlot) {
-    coverBannerEl = document.createElement("div")
-    coverBannerEl.id = "projectCoverBanner"
-    coverSlot.appendChild(coverBannerEl)
+  const { introBlock, layout, media } = composition;
+  let coverBannerEl = document.getElementById("projectCoverBanner");
+
+  if (!coverBannerEl) {
+    coverBannerEl = document.createElement("div");
+    coverBannerEl.id = "projectCoverBanner";
+    media.appendChild(coverBannerEl);
+  } else if (coverBannerEl.parentNode !== media) {
+    media.appendChild(coverBannerEl);
   }
 
-  if (coverBannerEl && coverSlot && coverBannerEl.parentNode !== coverSlot) {
-    coverSlot.appendChild(coverBannerEl)
-  }
+  const base = getBasePath();
+  const coverColor = getProjectCoverBg(project);
+  const coverSrc = normalizePath(project.coverBannerImage || project.coverImage || "", base);
+  const coverScale = getProjectCoverScale(project);
 
-  if (!coverBannerEl) return
-
-  if (coverBannerEl._coverExpansionCleanup) {
-    coverBannerEl._coverExpansionCleanup()
-    coverBannerEl._coverExpansionCleanup = null
-  }
-
-  const base = getBasePath()
-  const coverColor = getProjectCoverBg(project)
-  const coverSrc = normalizePath(project.coverBannerImage || project.coverImage || "", base)
-  const coverZoom = Number(project.coverZoom)
-  const imageScale = Number(project.imageScale)
-
-  const coverScale = Number.isFinite(coverZoom)
-    ? 1 + coverZoom / 100
-    : Number.isFinite(imageScale)
-      ? imageScale
-      : 1
-
-  removeChildren(coverBannerEl)
-  coverBannerEl.style.background = "transparent"
+  removeChildren(coverBannerEl);
+  coverBannerEl.className = "project-cover-banner";
+  coverBannerEl.style.background = "transparent";
+  coverBannerEl.hidden = false;
+  media.hidden = false;
+  layout.classList.remove("has-no-cover", "has-cover-error");
+  introBlock.classList.remove("has-no-project-cover");
 
   if (!coverSrc) {
-    coverBannerEl.hidden = true
-    coverBannerEl.style.background = "transparent"
-    document.body.classList.remove("is-project-cover-expanded", "has-project-cover")
-    setGlobalProjectBackground("var(--bg-main)")
-    warnLog(`Project cover missing for ${safeText(project.title)}`)
-    return
+    coverBannerEl.hidden = true;
+    media.hidden = true;
+    layout.classList.add("has-no-cover");
+    introBlock.classList.add("has-no-project-cover");
+    document.body.classList.remove("is-project-cover-expanded", "has-project-cover");
+    setGlobalProjectBackground("var(--bg-main)");
+    warnLog(`Project cover missing for ${safeText(project.title)}`);
+    return;
   }
 
-  coverBannerEl.hidden = false
-  coverBannerEl.classList.add("project-cover-banner")
-  document.body.classList.add("has-project-cover", "is-project-cover-expanded")
-  setGlobalProjectBackground("var(--bg-main)")
+  document.body.classList.remove("is-project-cover-expanded");
+  document.body.classList.add("has-project-cover");
+  setGlobalProjectBackground("var(--bg-main)");
 
-  setCssVar(coverBannerEl, "--project-cover-bg", coverColor)
-  setCssVar(coverBannerEl, "--project-cover-color", coverColor)
-  setCssVar(coverBannerEl, "--project-cover-image-scale", coverScale)
-  setCssVar(coverBannerEl, "--intro-logo-scale", coverScale)
-  const wrapper = document.createElement("div")
-  wrapper.className = "project-cover-wrapper"
+  setCssVar(coverBannerEl, "--project-cover-bg", coverColor);
+  setCssVar(coverBannerEl, "--project-cover-color", coverColor);
+  setCssVar(coverBannerEl, "--project-cover-image-scale", coverScale);
+  setCssVar(coverBannerEl, "--project-cover-image-x", project.coverImageX || "0px");
+  setCssVar(coverBannerEl, "--project-cover-image-y", project.coverImageY || "0px");
 
-  const coverBg = document.createElement("div")
-  coverBg.className = "project-cover-bg"
-  coverBg.setAttribute("aria-hidden", "true")
-  coverBg.style.background = coverColor
+  const wrapper = document.createElement("div");
+  wrapper.className = "project-cover-wrapper";
 
-  const coverImageFrame = document.createElement("div")
-  coverImageFrame.className = "project-cover-image-frame"
+  const coverBg = document.createElement("div");
+  coverBg.className = "project-cover-bg";
+  coverBg.setAttribute("aria-hidden", "true");
+  coverBg.style.background = coverColor;
 
-  const img = document.createElement("img")
-  img.className = "project-cover-img"
-  img.src = coverSrc
-  img.alt = `${safeText(project.title)} cover image`
-  img.decoding = "async"
-  img.style.setProperty("--project-cover-image-scale", String(coverScale))
+  const coverImageFrame = document.createElement("div");
+  coverImageFrame.className = "project-cover-image-frame";
 
-  coverImageFrame.appendChild(img)
-  wrapper.appendChild(coverBg)
-  wrapper.appendChild(coverImageFrame)
-  coverBannerEl.appendChild(wrapper)
+  const img = document.createElement("img");
+  img.className = "project-cover-img";
+  img.src = coverSrc;
+  img.alt = `${safeText(project.title)} cover image`;
+  img.decoding = "async";
+  img.loading = "eager";
+  img.fetchPriority = "high";
+
+  img.addEventListener("load", () => {
+    coverBannerEl.classList.remove("has-cover-error");
+    layout.classList.remove("has-cover-error");
+  }, { once: true });
+
+  img.addEventListener("error", () => {
+    coverBannerEl.classList.add("has-cover-error");
+    layout.classList.add("has-cover-error");
+    removeChildren(coverImageFrame);
+
+    const fallback = document.createElement("div");
+    fallback.className = "project-cover-fallback";
+    fallback.setAttribute("role", "img");
+    fallback.setAttribute("aria-label", `${safeText(project.title)} cover unavailable`);
+
+    const initials = safeText(project.title)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(word => word.charAt(0))
+      .join("")
+      .toUpperCase();
+
+    const mark = document.createElement("span");
+    mark.className = "project-cover-fallback-mark";
+    mark.textContent = initials || "PR";
+
+    const message = document.createElement("span");
+    message.className = "project-cover-fallback-message";
+    message.textContent = "Cover unavailable";
+
+    fallback.appendChild(mark);
+    fallback.appendChild(message);
+    coverImageFrame.appendChild(fallback);
+  }, { once: true });
+
+  coverImageFrame.appendChild(img);
+  wrapper.appendChild(coverBg);
+  wrapper.appendChild(coverImageFrame);
+  coverBannerEl.appendChild(wrapper);
 }
 
 function renderProjectText(project) {
@@ -1199,6 +1419,11 @@ function renderProjectImages(project) {
         img.alt = safeText(image.alt || project.title);
         img.loading = "lazy";
         img.decoding = "async";
+        img.addEventListener("error", () => {
+          img.remove();
+          if (!rowEl.querySelector("img, video, .custom-video, .compare-tabs")) rowEl.remove();
+          if (window.ScrollTrigger) ScrollTrigger.refresh();
+        }, { once: true });
 
         rowEl.appendChild(img);
         fragment.appendChild(rowEl);
@@ -1244,8 +1469,7 @@ function buildAutoEditorialConfig(project) {
   const title = safeText(project.title).trim();
   const category = safeText(getProjectCategoryText(project)).trim();
   const visualSet = getAutoEditorialVisualSet(project);
-
-  const visual = (names, fallbackIndex) => findAutoEditorialVisual(project, names, visualSet, fallbackIndex);
+  const visual = names => findAutoEditorialVisual(project, names, visualSet, -1);
   const resultText = getEditorialResultText(sections.result);
   const level = getProjectLevel(project);
 
@@ -1253,62 +1477,62 @@ function buildAutoEditorialConfig(project) {
     {
       id: `${normalizeSlug(project.slug)}-editorial-flow`,
       type: "problem",
-      layoutRole: "rail-left knownFlow",
-      claim: "The product starts with the user situation.",
-      headline: `${title} makes the core flow easier to understand.`,
+      layoutRole: "rail-left",
+      claim: "User situation",
+      headline: `${title} starts with a concrete product constraint.`,
       body: getEditorialExcerpt(sections.summary, 340),
       labels: compactEditorialLabels([category, level, getProjectYear(project)]),
-      dominantVisual: visual(["device line-up", "device lineup", "mobile system", "desktop and mobile system"], 0)
+      dominantVisual: visual(["device line-up", "device lineup"])
     },
     {
       id: `${normalizeSlug(project.slug)}-editorial-challenge`,
       type: "proof",
-      layoutRole: "rail-right opening",
-      claim: "The challenge defines what needs to be removed.",
-      headline: "Less friction, clearer decisions.",
+      layoutRole: "rail-right",
+      claim: "Critical constraint",
+      headline: "The challenge defines what the interface must clarify.",
       body: getEditorialExcerpt(sections.challenge || sections.summary, 340),
-      labels: ["Challenge", "Friction", "Clarity"],
-      dominantVisual: visual(["conceptual diptych", "hero statement"], 1)
+      labels: ["Constraint", "Decision context"],
+      dominantVisual: visual(["conceptual diptych"])
     },
     {
       id: `${normalizeSlug(project.slug)}-editorial-direction`,
       type: "proof",
-      layoutRole: "rail-left objectProof",
-      claim: "The direction turns the idea into a product attitude.",
-      headline: "The experience needs a clear visual stance.",
+      layoutRole: "rail-left",
+      claim: "Design direction",
+      headline: "The visual stance follows the product situation.",
       body: getEditorialExcerpt(sections.creativeDirection || sections.approach || sections.summary, 360),
-      labels: ["Creative direction", "Tone", "Product layer"],
-      dominantVisual: visual(["editorial object shot", "object shot"], 2)
+      labels: ["Creative direction", "Tone"],
+      dominantVisual: visual(["editorial object shot", "object shot"])
     },
     {
       id: `${normalizeSlug(project.slug)}-editorial-structure`,
       type: "sticky",
-      layoutRole: "rail-right entry",
-      claim: "The structure carries the experience.",
-      headline: "The system is shaped around the main user flow.",
+      layoutRole: "rail-right",
+      claim: "System logic",
+      headline: "The flow connects the main decisions.",
       body: getEditorialExcerpt(sections.approach || sections.summary, 360),
-      labels: ["Information architecture", "Flow", "System logic"],
-      dominantVisual: visual(["information architecture", "architecture"], 3)
+      labels: ["Information architecture", "Interaction model"],
+      dominantVisual: visual(["information architecture"])
     },
     {
       id: `${normalizeSlug(project.slug)}-editorial-detail`,
       type: "proof",
-      layoutRole: "rail-left explanation",
-      claim: "Small interface decisions make the logic readable.",
-      headline: "The details turn the concept into something usable.",
+      layoutRole: "rail-left",
+      claim: "Interface detail",
+      headline: "Hierarchy and states make the rule visible.",
       body: getEditorialExcerpt(sections.keyVisualSystem || sections.approach || sections.summary, 360),
-      labels: ["Visual system", "Hierarchy", "Interaction detail"],
-      dominantVisual: visual(["detail crop", "detail"], 4)
+      labels: ["Visual system", "State design"],
+      dominantVisual: visual(["detail crop"])
     },
     {
       id: `${normalizeSlug(project.slug)}-editorial-system`,
       type: "spread",
-      layoutRole: "rail-right coreProof",
-      claim: "The proof is the connected system.",
-      headline: `${title} works across the key moments of the journey.`,
+      layoutRole: "rail-right",
+      claim: "Current scope",
+      headline: `${title} remains a prototype until its open questions are tested.`,
       body: getEditorialExcerpt(resultText || sections.takeaway || sections.summary, 360),
-      labels: ["Outcome", "System proof", "Connected flow"],
-      dominantVisual: visual(["desktop and mobile system", "mobile system", "system"], 5)
+      labels: ["Prototype", "Open validation"],
+      dominantVisual: getProjectSystemVisual(project, visualSet)
     }
   ].filter(block => !isBlank(block.body) || block.dominantVisual);
 
@@ -1318,6 +1542,8 @@ function buildAutoEditorialConfig(project) {
     variant: "routeMapEditorial",
     thesis: createAutoEditorialThesis(project, sections),
     scopeNote: createAutoEditorialScopeNote(project, sections),
+    headerEvidence: detail.evidence,
+    headerNextValidation: detail.nextValidation,
     wowFactor: { module: "growingLine" },
     blocks
   };
@@ -1421,7 +1647,11 @@ function findAutoEditorialVisual(project, names, visualSet, fallbackIndex = 0) {
     return searchNames.some(name => src.includes(name) || alt.includes(name));
   });
 
-  return matched || list[fallbackIndex] || list[0] || null;
+  if (matched) return matched;
+  if (Number.isInteger(fallbackIndex) && fallbackIndex >= 0) {
+    return list[fallbackIndex] || null;
+  }
+  return null;
 }
 
 function setLegacyProjectDetailVisible(isVisible) {
@@ -1559,6 +1789,10 @@ section.style.setProperty("--case-story-line", editorialColor);
     getRouteMapImageDrivenBlocks(project, blocks).forEach((block, index) => {
       const blockEl = renderEditorialBlock(block, index);
       if (blockEl) inner.appendChild(blockEl);
+
+      // Scope belongs below the complete section, not inside its text column.
+      const scopeEl = renderEditorialScope(block.scopeItems);
+      if (scopeEl) inner.appendChild(scopeEl);
     });
 
     const closingMood = renderDbEditorialFullImage(project, "closing mood", {
@@ -1572,6 +1806,10 @@ section.style.setProperty("--case-story-line", editorialColor);
     blocks.forEach((block, index) => {
       const blockEl = renderEditorialBlock(block, index);
       if (blockEl) inner.appendChild(blockEl);
+
+      // Scope belongs below the complete section, not inside its text column.
+      const scopeEl = renderEditorialScope(block.scopeItems);
+      if (scopeEl) inner.appendChild(scopeEl);
     });
   }
 
@@ -1655,6 +1893,7 @@ function createDbImageBlock(baseBlock, visual, overrides = {}) {
     body: overrides.body || safeText(baseBlock && baseBlock.body),
     labels: overrides.labels || (baseBlock && baseBlock.labels) || [],
     stats: overrides.stats || (baseBlock && baseBlock.stats) || [],
+    scopeItems: overrides.scopeItems || (baseBlock && baseBlock.scopeItems) || [],
     markers: [],
     supportVisuals: [],
     detailCrops: [],
@@ -1665,14 +1904,43 @@ function createDbImageBlock(baseBlock, visual, overrides = {}) {
   };
 }
 
+function isSpatialProject(project) {
+  const haystack = [
+    project && project.slug,
+    project && project.title,
+    getProjectCategoryText(project),
+    project && project.detail && project.detail.sections && project.detail.sections.summary
+  ].map(value => safeText(value).toLowerCase()).join(" ");
+
+  return /\b(ar|vr|spatial|immersive|headset)\b/.test(haystack);
+}
+
+function getProjectSystemVisual(project, visualSet = getAutoEditorialVisualSet(project)) {
+  if (isSpatialProject(project)) {
+    return findAutoEditorialVisual(project, ["mobile system", "spatial system", "immersive system"], visualSet, -1);
+  }
+
+  return findAutoEditorialVisual(project, ["desktop and mobile system", "mobile system"], visualSet, -1);
+}
+
 function getRouteMapImageDrivenBlocks(project, blocks = []) {
   if (normalizeSlug(project.slug) === "dbnavigatorredesign") {
     return getDbImageDrivenBlocks(project, blocks);
   }
 
+  const visualSet = getAutoEditorialVisualSet(project);
+  const mappedVisuals = [
+    findAutoEditorialVisual(project, ["device line-up", "device lineup"], visualSet, -1),
+    findAutoEditorialVisual(project, ["conceptual diptych"], visualSet, -1),
+    findAutoEditorialVisual(project, ["editorial object shot", "object shot"], visualSet, -1),
+    findAutoEditorialVisual(project, ["information architecture"], visualSet, -1),
+    findAutoEditorialVisual(project, ["detail crop"], visualSet, -1),
+    getProjectSystemVisual(project, visualSet)
+  ];
+
   return blocks.map((block, index) => {
     const layoutRole = safeText(block.layoutRole) || (index % 2 === 0 ? "rail-left" : "rail-right");
-    const visual = block.dominantVisual || findAutoEditorialVisual(project, [], getAutoEditorialVisualSet(project), index);
+    const visual = block.dominantVisual || mappedVisuals[index] || null;
 
     return createDbImageBlock(block, visual, {
       id: block.id || `${normalizeSlug(project.slug)}-editorial-${index + 1}`,
@@ -1682,7 +1950,8 @@ function getRouteMapImageDrivenBlocks(project, blocks = []) {
       headline: block.headline,
       body: block.body,
       labels: block.labels,
-      stats: block.stats || []
+      stats: block.stats || [],
+      scopeItems: block.scopeItems || []
     });
   });
 }
@@ -1709,8 +1978,8 @@ function getDbImageDrivenBlocks(project, blocks = []) {
       id: "db-editorial-device-lineup",
       type: "problem",
       layoutRole: "rail-left opening",
-      claim: "Accessibility information is hidden, not integrated.",
-      headline: "The problem: Accessibility isn't part of route comparison.",
+      claim: "Critical constraint",
+      headline: "Accessibility information appears after the route decision.",
       body: "An elderly passenger may need wheelchair access and an accessible toilet. In the current flow, they have to leave route comparison to check both. The route looks valid before access is clear.",
       labels: ["Hidden access info", "Elderly passengers", "Disabled users"]
     }));
@@ -1721,8 +1990,8 @@ function getDbImageDrivenBlocks(project, blocks = []) {
       id: "db-editorial-conceptual-diptych",
       type: "proof",
       layoutRole: "rail-right knownFlow",
-      claim: "Integration over separation.",
-      headline: "The decision: Bring accessibility into route comparison.",
+      claim: "Accessibility decision",
+      headline: "Access conditions move into route comparison.",
       body: "Instead of a separate accessibility mode, access indicators live inside the route cards. Users compare wheelchair access, toilets, and hearing loops where they already compare time and changes.",
       labels: ["Design decision", "Journey flow", "Route comparison"]
     }));
@@ -1733,8 +2002,8 @@ function getDbImageDrivenBlocks(project, blocks = []) {
       id: "db-editorial-object-shot",
       type: "proof",
       layoutRole: "rail-left objectProof",
-      claim: "Four categories turn scattered data into a system.",
-      headline: "Layer 1: Access needs become scannable.",
+      claim: "Category model",
+      headline: "Four groups make 15 access conditions scannable.",
       body: "15 conditions are grouped into Mobility, Sanitary, Sensory, and Assistance. A user looking for a wheelchair-accessible toilet can scan Mobility and Sanitary first.",
       labels: ["Mobility", "Sanitary", "Sensory", "Assistance"]
     }));
@@ -1745,8 +2014,8 @@ function getDbImageDrivenBlocks(project, blocks = []) {
       id: "db-editorial-information-architecture",
       type: "sticky",
       layoutRole: "rail-right entry",
-      claim: "Users set their access needs before results appear.",
-      headline: "Layer 2: The options flow personalizes comparison.",
+      claim: "Preference setup",
+      headline: "Users select relevant access needs before results appear.",
       body: "Before searching, users select what matters to them. If wheelchair access and accessible toilets are required, the results highlight those conditions first instead of showing every indicator equally.",
       labels: ["Options flow", "Personalized results", "Required conditions"],
       stats: [
@@ -1771,8 +2040,8 @@ function getDbImageDrivenBlocks(project, blocks = []) {
       id: "db-editorial-detail-crop",
       type: "proof",
       layoutRole: "rail-left explanation",
-      claim: "The score is visible, but the reasoning stays accessible.",
-      headline: "Layer 3: Progressive details explain the score.",
+      claim: "Progressive detail",
+      headline: "The route score opens into condition-level evidence.",
       body: "Each route shows a quick access score. One tap opens the condition list. A second level shows where access is available, limited, or missing across stations and route steps.",
       labels: ["Access score", "Available", "Limited", "Missing"]
     }));
@@ -1783,22 +2052,22 @@ function getDbImageDrivenBlocks(project, blocks = []) {
       id: "db-editorial-mobile-system",
       type: "spread",
       layoutRole: "rail-right coreProof",
-      claim: "Concept first. Validation still open.",
-      headline: "Scope: A heuristic concept, not a validated product.",
+      claim: "Next validation step",
+      headline: "The heuristic concept needs route-planning tests.",
       body: "This independent redesign explores how DB Navigator could integrate accessibility into route comparison. It was shaped through heuristic review and WCAG contrast checks, not user testing.",
       labels: ["Independent concept", "Heuristic-based", "No user testing"],
-      stats: [
+      scopeItems: [
         {
-          value: "Proves",
-          label: "Integration can reduce separation"
+          title: "Concept contribution",
+          text: "Integrated accessibility conditions inside the familiar route-comparison flow."
         },
         {
-          value: "Shows",
-          label: "Existing flows can hold more clarity"
+          title: "Current evidence",
+          text: "Heuristic accessibility review, WCAG contrast checks and high-fidelity prototype states."
         },
         {
-          value: "Open",
-          label: "User testing and validation"
+          title: "Next validation",
+          text: "Journey-planning tests with elderly passengers and disabled users."
         }
       ]
     }));
@@ -1813,15 +2082,9 @@ function renderEditorialHeader(project, editorial) {
   const thesis = document.createElement("h2");
   thesis.className = "case-story-thesis";
   thesis.textContent = safeText(editorial.thesis || project.title);
-
   header.appendChild(thesis);
 
-  if (!isBlank(editorial.scopeNote)) {
-    const scope = document.createElement("p");
-    scope.className = "case-story-scope";
-    scope.textContent = safeText(editorial.scopeNote);
-    header.appendChild(scope);
-  }
+  
 
   return header;
 }
@@ -1989,7 +2252,10 @@ function renderEditorialLabels(labels) {
 }
 function renderEditorialStats(stats) {
   const values = Array.isArray(stats)
-    ? stats.filter(stat => stat && (!isBlank(stat.value) || !isBlank(stat.label))).slice(0, 3)
+    ? stats.filter(stat => {
+        if (!stat || (isBlank(stat.value) && isBlank(stat.label))) return false;
+        return !["proves", "shows", "open"].includes(safeText(stat.value).trim().toLowerCase());
+      }).slice(0, 3)
     : [];
 
   if (!values.length) return null;
@@ -2020,6 +2286,36 @@ function renderEditorialStats(stats) {
       card.appendChild(label);
     }
 
+    wrap.appendChild(card);
+  });
+
+  return wrap;
+}
+
+function renderEditorialScope(scopeItems) {
+  const values = Array.isArray(scopeItems)
+    ? scopeItems.filter(item => item && (!isBlank(item.title) || !isBlank(item.text))).slice(0, 3)
+    : [];
+
+  if (!values.length) return null;
+
+  const wrap = document.createElement("div");
+  wrap.className = "case-scope-grid";
+
+  values.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "case-scope-item";
+
+    const title = document.createElement("h4");
+    title.className = "case-scope-title";
+    title.textContent = safeText(item.title);
+
+    const text = document.createElement("p");
+    text.className = "case-scope-text";
+    text.textContent = safeText(item.text);
+
+    card.appendChild(title);
+    card.appendChild(text);
     wrap.appendChild(card);
   });
 
@@ -2378,7 +2674,9 @@ function createProjectMediaItem(item, base = getBasePath()) {
   }, { once: true });
 
   img.addEventListener("error", () => {
-    img.closest(".image-row")?.remove();
+    const row = img.closest(".image-row");
+    img.remove();
+    if (row && !row.querySelector("img, video, .custom-video, .compare-tabs")) row.remove();
     if (window.ScrollTrigger) ScrollTrigger.refresh();
   }, { once: true });
 
@@ -2389,9 +2687,11 @@ function createCustomVideoBlock(item, base = getBasePath()) {
   if (!item || isBlank(item.src)) return null;
 
   const template = document.createElement("template");
+  const atmospheric = safeText(item.fit || item.presentation || item.mediaStyle).toLowerCase() === "cover"
+    || safeText(item.presentation).toLowerCase() === "atmospheric";
 
   template.innerHTML = `
-    <div class="custom-video" data-custom-video>
+    <div class="custom-video${atmospheric ? " is-atmospheric" : ""}" data-custom-video>
       <video
         class="custom-video-media"
         playsinline
@@ -2407,7 +2707,11 @@ function createCustomVideoBlock(item, base = getBasePath()) {
         </span>
       </button>
 
-      <div class="custom-video-controls" hidden>
+      <div class="custom-video-controls">
+        <button class="video-toggle-btn" type="button" aria-label="Play video" aria-pressed="false">
+          <span class="video-toggle-icon" aria-hidden="true">▶</span>
+        </button>
+
         <input class="video-progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="Video progress">
 
         <div class="video-volume" data-volume-control>
@@ -2781,8 +3085,9 @@ function initFilters() {
     if (!typeToggle || !typeToggleWrap) return;
 
     const activeType = activeFilters.level || "all";
-    typeToggleWrap.dataset.typeState = activeType === "Group Project" ? "group" : activeType === "Private" ? "private" : "all";
-    typeToggle.setAttribute("aria-pressed", String(activeType === "Group Project"));
+    typeToggleWrap.dataset.typeState = activeType === "Team Project" ? "team" : activeType === "Independent Project" ? "independent" : "all";
+    typeToggle.setAttribute("aria-pressed", String(activeType === "Team Project"));
+    typeToggle.setAttribute("aria-label", activeType === "Team Project" ? "Show independent projects" : "Show team projects");
   }
 
   function updateYearToggleState() {
@@ -2886,7 +3191,7 @@ function initFilters() {
 
   if (typeToggle) {
     typeToggle.addEventListener("click", () => {
-      activeFilters.level = activeFilters.level === "Group Project" ? "Private" : "Group Project";
+      activeFilters.level = activeFilters.level === "Team Project" ? "Independent Project" : "Team Project";
       applyFilters(true);
     });
   }
@@ -2976,7 +3281,7 @@ function initProjectImagePreview(root = document) {
     .project-detail-section .compare-tab-panel img,
     .project-detail-section .before-after-slider img,
     .case-story-section .case-visual-img,
-    .case-story-section .case-story-hero-statement-img,
+    .case-story-section .case-story-fullbleed-img,
     .case-story-section .compare-tab-panel img,
     .case-story-section .before-after-slider img
   `, root).filter(image => {
@@ -2996,56 +3301,99 @@ function initProjectImagePreview(root = document) {
     preview.className = "project-image-preview";
     preview.setAttribute("aria-hidden", "true");
     preview.setAttribute("role", "dialog");
+    preview.setAttribute("aria-modal", "true");
     preview.setAttribute("aria-label", "Image preview");
+    preview.tabIndex = -1;
 
     const inner = document.createElement("div");
     inner.className = "project-image-preview-inner";
+
+    const closeButton = document.createElement("button");
+    closeButton.className = "project-image-preview-close";
+    closeButton.type = "button";
+    closeButton.setAttribute("aria-label", "Close image preview");
+    closeButton.textContent = "×";
 
     const image = document.createElement("img");
     image.className = "project-image-preview-img";
     image.alt = "";
 
+    inner.appendChild(closeButton);
     inner.appendChild(image);
     preview.appendChild(inner);
     document.body.appendChild(preview);
 
-    function closePreview() {
+    preview._returnFocus = null;
+
+    preview._closePreview = function closePreview() {
+      if (!preview.classList.contains("is-visible")) return;
       preview.classList.remove("is-visible");
       preview.setAttribute("aria-hidden", "true");
       document.body.classList.remove("is-project-image-preview-open");
-    }
+      const returnTarget = preview._returnFocus;
+      preview._returnFocus = null;
+      if (returnTarget && document.contains(returnTarget)) returnTarget.focus();
+    };
 
-    preview.addEventListener("click", closePreview);
+    closeButton.addEventListener("click", preview._closePreview);
+    inner.addEventListener("click", event => event.stopPropagation());
+    preview.addEventListener("click", event => {
+      if (event.target === preview) preview._closePreview();
+    });
 
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape") closePreview();
+      if (!preview.classList.contains("is-visible")) return;
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        preview._closePreview();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const focusable = qsa('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])', preview)
+        .filter(item => item.offsetParent !== null);
+      if (!focusable.length) {
+        event.preventDefault();
+        preview.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     });
   }
 
   const previewImage = qs(".project-image-preview-img", preview);
+  const closeButton = qs(".project-image-preview-close", preview);
 
   previewImages.forEach(image => {
     if (image.dataset.projectPreviewReady) return;
     image.dataset.projectPreviewReady = "true";
 
-    const trigger =
-      image.closest(".case-visual-frame") ||
-      image.closest(".case-story-hero-statement-strip") ||
-      image.closest(".compare-tab-panel") ||
-      image.closest(".before-after-slider") ||
-      image.closest(".image-row") ||
-      image;
+    // Each image is its own preview trigger. Shared rows and sliders must never redirect a click to a sibling image.
+    const trigger = image;
 
     trigger.setAttribute("tabindex", "0");
     trigger.setAttribute("role", "button");
-    trigger.setAttribute("aria-label", "Open image preview");
+    trigger.setAttribute("aria-haspopup", "dialog");
+    trigger.setAttribute("aria-label", image.alt ? `Open image preview: ${image.alt}` : "Open image preview");
 
     function openPreview() {
+      preview._returnFocus = trigger;
       previewImage.src = image.currentSrc || image.src;
       previewImage.alt = image.alt || "";
       preview.classList.add("is-visible");
       preview.setAttribute("aria-hidden", "false");
       document.body.classList.add("is-project-image-preview-open");
+      requestAnimationFrame(() => closeButton?.focus());
     }
 
     trigger.addEventListener("click", event => {
@@ -3060,150 +3408,6 @@ function initProjectImagePreview(root = document) {
     });
   });
 }
-/* PROJECT COVER EXPANSION */
-function initProjectCoverExpansion({ coverBannerEl, coverBg, coverImageFrame, coverColor }) {
-  if (!coverBannerEl) return;
-
-  if (coverBannerEl._coverExpansionCleanup) coverBannerEl._coverExpansionCleanup();
-
-  const wrapper = qs(".project-cover-wrapper", coverBannerEl);
-  if (!wrapper) return;
-
-  if (window.gsap) gsap.killTweensOf(wrapper);
-
-  const controller = new AbortController();
-  const EXPAND_AT = 24;
-  const SHRINK_AT = 2;
-
-  let isExpanded = false;
-  let resizeTimeout = null;
-  let scrollTicking = false;
-
-  function getBannerPadding() {
-    if (window.innerWidth <= 640) return 16;
-    if (window.innerWidth <= 1000) return 18;
-    return 20;
-  }
-
-  function getBannerRadius() {
-    if (window.innerWidth <= 640) return 20;
-    if (window.innerWidth <= 1000) return 24;
-    return 32;
-  }
-
-  function getAvailableWidth() {
-    return Math.max(0, window.innerWidth - getBannerPadding() * 2);
-  }
-
-  function getCollapsedWidth() {
-    const available = getAvailableWidth();
-
-    if (window.innerWidth <= 1000) return available;
-
-    const preferred = Math.round(window.innerWidth * 0.76);
-    return Math.min(available, Math.max(900, Math.min(preferred, 1400)));
-  }
-
-  function getExpandedWidth() {
-    return getAvailableWidth();
-  }
-
-  function applyBannerWidth(width, animate = false) {
-    const target = {
-      width: `${Math.round(width)}px`,
-      borderRadius: `${getBannerRadius()}px`
-    };
-
-    if (window.gsap) {
-      gsap.to(wrapper, {
-        ...target,
-        duration: animate && !prefersReducedMotion ? 1.15 : 0,
-        ease: "power3.out",
-        overwrite: true
-      });
-      return;
-    }
-
-    wrapper.style.width = target.width;
-    wrapper.style.borderRadius = target.borderRadius;
-  }
-
-  function setCollapsedInstant() {
-    isExpanded = false;
-    document.body.classList.remove("is-project-cover-expanded");
-    setGlobalProjectBackground("var(--bg-main)");
-    applyBannerWidth(getCollapsedWidth(), false);
-  }
-
-  function setExpandedInstant() {
-    isExpanded = true;
-    document.body.classList.add("is-project-cover-expanded");
-    setGlobalProjectBackground("var(--bg-main)");
-    applyBannerWidth(getExpandedWidth(), false);
-  }
-
-  function expandCover(animate = true) {
-    if (isExpanded) return;
-
-    isExpanded = true;
-    document.body.classList.add("is-project-cover-expanded");
-    setGlobalProjectBackground("var(--bg-main)");
-    applyBannerWidth(getExpandedWidth(), animate);
-  }
-
-  function shrinkCover(animate = true) {
-    if (!isExpanded) return;
-
-    isExpanded = false;
-    document.body.classList.remove("is-project-cover-expanded");
-    setGlobalProjectBackground("var(--bg-main)");
-    applyBannerWidth(getCollapsedWidth(), animate);
-  }
-
-  function checkState() {
-    if (window.scrollY >= EXPAND_AT) {
-      expandCover(true);
-      return;
-    }
-
-    if (window.scrollY <= SHRINK_AT) shrinkCover(true);
-  }
-
-  function onScroll() {
-    if (scrollTicking) return;
-
-    scrollTicking = true;
-
-    requestAnimationFrame(() => {
-      checkState();
-      scrollTicking = false;
-    });
-  }
-
-  function onResize() {
-    clearTimeout(resizeTimeout);
-
-    resizeTimeout = window.setTimeout(() => {
-      if (isExpanded) setExpandedInstant();
-      else setCollapsedInstant();
-
-      if (window.ScrollTrigger) ScrollTrigger.refresh();
-    }, 120);
-  }
-
-  if (window.scrollY >= EXPAND_AT) setExpandedInstant();
-  else setCollapsedInstant();
-
-  window.addEventListener("scroll", onScroll, { passive: true, signal: controller.signal });
-  window.addEventListener("resize", onResize, { signal: controller.signal });
-
-  coverBannerEl._coverExpansionCleanup = () => {
-    clearTimeout(resizeTimeout);
-    controller.abort();
-    if (window.gsap) gsap.killTweensOf(wrapper);
-  };
-}
-
 /* SMOOTH SCROLL */
 function registerScrollTrigger() {
   if (window.gsap && window.ScrollTrigger) {
@@ -3235,6 +3439,10 @@ function initSmoothScroll() {
 function initScrollToTop() {
   const button = qs("#toTop");
   if (!button) return;
+
+  button.type = "button";
+  button.setAttribute("aria-label", "Back to top");
+  button.innerHTML = '<span class="to-top-icon" aria-hidden="true">↑</span><span class="to-top-label">Back to top</span>';
 
   button.addEventListener("click", () => {
     if (lenis && !prefersReducedMotion) {
@@ -3659,6 +3867,8 @@ function initCustomVideos() {
     const playButton = qs(".custom-video-play", block);
     const blob = qs(".play-blob", block);
     const progress = qs(".video-progress", block);
+    const toggleButton = qs(".video-toggle-btn", block);
+    const toggleIcon = qs(".video-toggle-icon", block);
     const controls = qs(".custom-video-controls", block);
     const time = qs(".video-time", block);
     const volumeButton = qs(".video-volume-btn", block);
@@ -3667,7 +3877,7 @@ function initCustomVideos() {
 
     if (!video || !playButton) return;
 
-    if (!blob || !progress || !controls || !time || !volumeButton || !volumeSlider) {
+    if (!blob || !progress || !controls || !time || !toggleButton || !volumeButton || !volumeSlider) {
       video.setAttribute("controls", "controls");
       return;
     }
@@ -3702,18 +3912,24 @@ function initCustomVideos() {
     }
 
     function showControls() {
-      if (video.paused) return;
-
       controls.hidden = false;
       block.classList.add("is-controls-visible");
       clearTimeout(controlsTimeout);
 
-      controlsTimeout = setTimeout(() => {
-        block.classList.remove("is-controls-visible");
-      }, 1600);
+      if (!video.paused) {
+        controlsTimeout = setTimeout(() => {
+          block.classList.remove("is-controls-visible");
+        }, 2200);
+      }
     }
 
     function hideControls() {
+      if (video.paused) {
+        controls.hidden = false;
+        block.classList.add("is-controls-visible");
+        return;
+      }
+
       block.classList.remove("is-controls-visible");
 
       window.setTimeout(() => {
@@ -3886,9 +4102,24 @@ function initCustomVideos() {
       else video.pause();
     }
 
+    function updatePlaybackUI() {
+      const isPlaying = !video.paused && !video.ended;
+      toggleButton.setAttribute("aria-pressed", String(isPlaying));
+      toggleButton.setAttribute("aria-label", isPlaying ? "Pause video" : "Play video");
+      if (toggleIcon) toggleIcon.textContent = isPlaying ? "Ⅱ" : "▶";
+      playButton.setAttribute("aria-label", isPlaying ? "Pause video" : "Play video");
+    }
+
     playButton.addEventListener("click", event => {
       event.preventDefault();
       toggleVideo();
+    });
+
+    toggleButton.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleVideo();
+      showControls();
     });
 
     block.addEventListener("click", event => {
@@ -3932,17 +4163,20 @@ function initCustomVideos() {
       block.classList.add("is-playing");
       block.classList.remove("is-near", "is-video-hovered", "is-fill-exiting", "is-fill-resetting");
       controls.hidden = false;
+      updatePlaybackUI();
       showControls();
     });
 
     video.addEventListener("pause", () => {
       block.classList.remove("is-playing");
-      hideControls();
+      updatePlaybackUI();
+      showControls();
       resetBlob();
     });
 
     video.addEventListener("ended", () => {
       block.classList.remove("is-playing");
+      updatePlaybackUI();
       progress.value = 0;
       video.currentTime = 0;
       hideControls();
@@ -3951,6 +4185,9 @@ function initCustomVideos() {
 
     video.addEventListener("loadedmetadata", () => {
       time.textContent = "0:00";
+      controls.hidden = false;
+      updatePlaybackUI();
+      showControls();
     });
 
     video.addEventListener("timeupdate", () => {
@@ -4029,7 +4266,10 @@ function initCustomVideos() {
       if (!video.paused) hideControls();
     });
 
+    controls.hidden = false;
+    updatePlaybackUI();
     updateVolumeUI(false);
+    showControls();
   });
 }
 
