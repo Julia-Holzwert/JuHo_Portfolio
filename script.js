@@ -519,9 +519,8 @@ function loadNavbar() {
           <div class="theme-toggle">
             <input type="checkbox" id="darkmode-toggle" aria-label="Use dark mode" />
             <label for="darkmode-toggle" class="toggle-label" aria-hidden="true">
-              <svg class="sun" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="32" cy="32" r="15" />
-                <path d="M32 0v10M32 54v10M0 32h10M54 32h10M9.4 9.4l7.1 7.1M47.5 47.5l7.1 7.1M54.6 9.4l-7.1 7.1M16.5 47.5l-7.1 7.1" stroke="currentColor" stroke-width="6" stroke-linecap="round" />
+              <svg class="sun" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="8" cy="8" r="8" />
               </svg>
 
               <svg class="moon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

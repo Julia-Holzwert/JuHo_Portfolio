@@ -2348,7 +2348,7 @@ body[data-project-slug="DBNavigatorRedesign"] .project-intro-block #projectCover
 }
 
 body[data-project-slug="healthyStart"] .project-intro-block #projectCoverBanner{
-  --intro-logo-scale:.72;
+  --intro-logo-scale:.99;
 }
 
 body[data-project-slug] .project-cover-fallback{
