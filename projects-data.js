@@ -8,8 +8,8 @@ const projectsData = {
       categories: ["Spatial Experience"],
 
       level: "Private",
-      coverImage: "./pngs/Projects/Offline/Logo.png",
-      coverBannerImage: "./pngs/Projects/Offline/Logo.png",
+      coverImage: "./pngs/Projects/Offline/logo.png",
+      coverBannerImage: "./pngs/Projects/Offline/logo.png",
       coverBackgroundColor: "#ffffff",
       coverZoom: 5,
       imageScale: 1.15,
@@ -349,6 +349,7 @@ const projectsData = {
         "Accessibility-informed design",
       ],
     },
+    //HEADSUP
     {
       "slug": "headsUp",
       "title": "HeadsUp",
@@ -624,6 +625,7 @@ const projectsData = {
         "Iteration from test observations"
       ]
     },
+    //CAMPUSTALK
     {
       "slug": "campusTalk",
       "title": "CampusTalk",
@@ -896,6 +898,7 @@ const projectsData = {
         "Prototype iteration"
       ]
     },
+    //APRÉS
     {
       "slug": "Après",
       "title": "Après",
@@ -1158,6 +1161,7 @@ const projectsData = {
         "Accessibility-informed alert design"
       ]
     },
+    //DAZN
     {
       "slug": "dazn",
       "title": "DAZN",
@@ -1416,6 +1420,7 @@ const projectsData = {
         "High-fidelity prototyping"
       ]
     },
+    //BODIQUE
     {
       "slug": "bodique",
       "title": "Bodique",
@@ -1691,6 +1696,7 @@ const projectsData = {
         "Prototype iteration"
       ]
     },
+    //STORE GUIDE
     {
       "slug": "storeGuide",
       "title": "Store Guide",
@@ -1942,6 +1948,7 @@ const projectsData = {
         "Constraint-led iteration"
       ]
     },
+    //PRINTER INTERFACE
     {
       "slug": "printerInterface",
       "title": "Printer Interface",
@@ -2197,6 +2204,7 @@ const projectsData = {
         "High-fidelity prototyping"
       ]
     },
+    //MEMOWE
     {
       "slug": "memowe",
       "title": "MemoWe",
@@ -2454,6 +2462,7 @@ const projectsData = {
         "Early family feedback"
       ]
     },
+    //PIKBRE 3D REMOTE CONTROL
     {
       "slug": "pikBre3D-RemoteControl",
       "title": "PikBre 3D - Remote",
@@ -2713,6 +2722,7 @@ const projectsData = {
         "3D concept development"
       ]
     },
+    //DB NAVIGATOR REDESIGN
     {
       "slug": "DBNavigatorRedesign",
       "title": "DB Navigator Accessibility",
@@ -2892,6 +2902,7 @@ const projectsData = {
         "High-fidelity prototyping"
       ]
     },
+    //SPATIAL TO-DO
     {
       "slug": "spatialTo-Do",
       "title": "Spatial To-Do",
@@ -3151,6 +3162,7 @@ const projectsData = {
         "Motion restraint review"
       ]
     },
+    //HEALTHY START
     {
       "slug": "healthyStart",
       "title": "HealthyStart",
