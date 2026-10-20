@@ -1,5 +1,354 @@
 const projectsData = {
   "projects": [
+    //OFFLINE
+    {
+      slug: "offline",
+      title: "OFFLINE",
+      href: "./projectSites/offline.html",
+      categories: ["Spatial Experience"],
+
+      level: "Private",
+      coverImage: "./pngs/Projects/Offline/Logo.png",
+      coverBannerImage: "./pngs/Projects/Offline/Logo.png",
+      coverBackgroundColor: "#ffffff",
+      coverZoom: 5,
+      imageScale: 1.15,
+      cardCategory: "Museum für Kommunikation Berlin X Offline",
+
+      detail: {
+        meta: "Independent Exhibition Concept · 2026 · Unofficial Museum für Kommunikation Berlin Exhibition",
+
+        sections: {
+          summary:
+            "OFFLINE is an interactive exhibition concept for the Museum für Kommunikation Berlin. Across seven connected spaces, visitors experience notification pressure, delayed responses, orientation without GPS, outsourced memory, and communication through movement, objects, light, sound, and other people.",
+
+          challenge:
+            "The challenge was turning digital absence into a physical experience. Being offline can feel like rejection, relief, uncertainty, or intentional distance. A screen-led exhibition would contradict the subject, while a simple digital-detox message would ignore how complex communication has become.",
+
+          approach:
+            "I developed the curatorial premise, seven-room visitor journey, physical interaction principles, accessibility approach, environmental identity, and key installations. The route moves from overload and interruption to waiting, disorientation, memory, shared presence, and conscious reconnection.",
+
+          creativeDirection:
+            "OFFLINE is positioned as a communication exhibition rather than a wellness campaign or technology showcase. Displays are replaced by paper, mechanical indicators, directional sound, light, distance, waiting, and collective action. Historical communication objects connect current digital behaviour with earlier expectations around speed, memory, and availability.",
+
+          keyVisualSystem:
+            "Warm paper white, carbon black, and signal orange form the visual system. A broken horizontal line connects the wordmark, room sequence, signage, tactile guidance, and installations. The identity begins dense and fragmented, then becomes quieter and more open as visitors move through the exhibition.",
+
+          result: [
+            "Spatial Experience Architecture: Defined a seven-room journey from digital overload to conscious reconnection.",
+            "Interaction Beyond Displays: Used movement, waiting, sound, paper, mechanical objects, light, and cooperation as interface materials.",
+            "Museum Integration: Connected contemporary communication behaviour with historical objects and changing communication systems.",
+            "Inclusive Experience Principles: Included low-stimulus routes, multisensory cues, optional participation, and equivalent interaction paths.",
+            "Prototype-Ready Concept: Defined clear behavioural hypotheses and installations for future spatial prototyping.",
+          ],
+
+          takeawayTitle: "Takeaway",
+
+          takeaway:
+            "This project expanded my design practice beyond screens. Instead of arranging information inside an interface, I designed what visitors hear, follow, carry, wait for, remember, and do together. It showed that an interface can also be a space, an object, a delay, or another person.",
+        },
+
+        images: [
+          {
+            layout: "one",
+            items: [
+              {
+                src: "../pngs/Projects/Offline/01 Connected Entrance.png",
+                alt: "OFFLINE exhibition entrance with dense communication signals",
+              },
+            ],
+          },
+          {
+            layout: "one",
+            items: [
+              {
+                src: "../pngs/Projects/Offline/02 Signal Storm.png",
+                alt: "Responsive Signal Storm installation",
+              },
+            ],
+          },
+          {
+            layout: "one",
+            items: [
+              {
+                src: "../pngs/Projects/Offline/03 Waiting Room.png",
+                alt: "OFFLINE exhibition waiting room with delayed messages",
+              },
+            ],
+          },
+          {
+            layout: "one",
+            items: [
+              {
+                src: "../pngs/Projects/Offline/04 Offline Map.png",
+                alt: "Screenless spatial navigation system",
+              },
+            ],
+          },
+          {
+            layout: "one",
+            items: [
+              {
+                src: "../pngs/Projects/Offline/05 Memory Exchange.png",
+                alt: "Physical memory exchange using paper and objects",
+              },
+            ],
+          },
+        ],
+
+        editorialArtDirectedCaseStudyImages: [
+          {
+            src: "./pngs/Projects/Offline/Editorial/Hero Statement.png",
+            alt: "OFFLINE exhibition hero statement",
+          },
+          {
+            src: "./pngs/Projects/Offline/Editorial/Experience Sequence.png",
+            alt: "Seven-stage exhibition sequence",
+          },
+          {
+            src: "./pngs/Projects/Offline/Editorial/Signal Storm.png",
+            alt: "Responsive notification overload installation",
+          },
+          {
+            src: "./pngs/Projects/Offline/Editorial/Waiting Object.png",
+            alt: "Mechanical delayed-message object",
+          },
+          {
+            src: "./pngs/Projects/Offline/Editorial/Offline Map.png",
+            alt: "Screenless spatial navigation system",
+          },
+          {
+            src: "./pngs/Projects/Offline/Editorial/Collection Dialogue.png",
+            alt: "Historical communication objects within the exhibition",
+          },
+          {
+            src: "./pngs/Projects/Offline/Editorial/Silent Network.png",
+            alt: "Collective interaction through light and movement",
+          },
+          {
+            src: "./pngs/Projects/Offline/Editorial/Closing Mood.png",
+            alt: "Final reflection space of the exhibition",
+          },
+        ],
+
+        editorial: {
+          color: "#F05A28",
+          variant: "routeMapEditorial",
+
+          thesis:
+            "Offline does not end communication. It changes how we connect.",
+
+          scopeNote:
+            "Unofficial exhibition concept for the Museum für Kommunikation Berlin. Hypothesis-driven, unbuilt, and not visitor-tested.",
+          wowFactor: {
+            module: "growingLine",
+          },
+
+          blocks: [
+            {
+              type: "problem",
+              layoutRole: "rail-left",
+              claim: "Digital absence does not feel the same to everyone.",
+              headline:
+                "The problem: Offline can mean rejection, relief, or control.",
+              body: "The exhibition avoids presenting disconnection as universally positive. It lets visitors question their own expectations around availability, silence, memory, and attention.",
+              labels: [
+                "Behavioural hypotheses",
+                "Digital absence",
+                "No universal answer",
+              ],
+              dominantVisual: {
+                src: "./pngs/Projects/Offline/Editorial/Experience Sequence.png",
+                alt: "Seven-stage exhibition sequence",
+              },
+            },
+            {
+              type: "proof",
+              layoutRole: "rail-right",
+              claim: "The exhibition removes the display from the centre.",
+              headline: "The decision: Make communication physical again.",
+              body: "Delay, distance, paper, sound, light, movement, and cooperation replace touchscreen-led interaction. Technology remains in the background.",
+              labels: [
+                "Curatorial decision",
+                "Screenless interaction",
+                "Embodied experience",
+              ],
+              dominantVisual: {
+                src: "./pngs/Projects/Offline/Editorial/Signal Storm.png",
+                alt: "Responsive notification overload installation",
+              },
+            },
+            {
+              type: "proof",
+              layoutRole: "rail-left",
+              claim: "Seven rooms change the conditions of communication.",
+              headline: "Layer 1: The journey moves from overload to agency.",
+              body: "Each room removes a familiar digital certainty and introduces a different way to send, receive, interpret, or share information.",
+              labels: [
+                "7 spatial chapters",
+                "Narrative pacing",
+                "Visitor journey",
+              ],
+              stats: [
+                {
+                  value: "7",
+                  label: "Connected exhibition spaces",
+                },
+                {
+                  value: "0",
+                  label: "Required personal devices",
+                },
+                {
+                  value: "1",
+                  label: "Continuous spatial narrative",
+                },
+              ],
+              dominantVisual: {
+                src: "./pngs/Projects/Offline/Editorial/Offline Map.png",
+                alt: "Screenless spatial navigation system",
+              },
+            },
+            {
+              type: "sticky",
+              layoutRole: "rail-right",
+              claim: "Waiting, navigating, and remembering become interfaces.",
+              headline:
+                "Layer 2: Visitors interact through physical conditions.",
+              body: "Signal Storm, Waiting Room, and Offline Map turn attention, delay, sound, material, and orientation into interaction principles.",
+              labels: [
+                "Responsive space",
+                "Delayed feedback",
+                "Physical navigation",
+              ],
+              dominantVisual: {
+                src: "./pngs/Projects/Offline/Editorial/Waiting Object.png",
+                alt: "Mechanical delayed-message object",
+              },
+            },
+            {
+              type: "proof",
+              layoutRole: "rail-left",
+              claim: "The final installation only works through other people.",
+              headline: "Layer 3: Shared attention becomes the interface.",
+              body: "Silent Network activates only when visitors notice one another and coordinate their positions. Communication becomes a collective spatial action.",
+              labels: [
+                "Collective behaviour",
+                "Proximity",
+                "Non-verbal communication",
+              ],
+              dominantVisual: {
+                src: "./pngs/Projects/Offline/Editorial/Silent Network.png",
+                alt: "Collective interaction through light and movement",
+              },
+            },
+            {
+              type: "spread",
+              layoutRole: "rail-right",
+              claim: "Accessibility changes intensity, not meaning.",
+              headline: "Scope: A hypothesis-driven spatial experience.",
+              body: "Low-stimulus routes preserve the same central moments with reduced sensory intensity. Spatial prototyping, engineering, and visitor observation remain the next steps.",
+              labels: [
+                "Equivalent experience",
+                "Hypothesis-driven",
+                "Prototype-ready",
+              ],
+              stats: [
+                {
+                  value: "Defines",
+                  label: "A complete spatial concept",
+                },
+                {
+                  value: "Explores",
+                  label: "Interaction beyond displays",
+                },
+                {
+                  value: "Next",
+                  label: "Spatial prototyping",
+                },
+              ],
+              scopeItems: [
+                {
+                  title: "Concept contribution",
+                  text: "A seven-room spatial journey from digital overload to conscious reconnection.",
+                },
+                {
+                  title: "Current evidence",
+                  text: "Curatorial premise, spatial narrative, and defined installations with behavioural hypotheses.",
+                },
+                {
+                  title: "Next validation",
+                  text: "Spatial prototyping, engineering, and visitor observation.",
+                },
+              ],
+              dominantVisual: {
+                src: "./pngs/Projects/Offline/Editorial/Collection Dialogue.png",
+                alt: "Historical communication objects within the exhibition",
+              },
+            },
+          ],
+
+          headerEvidence:
+            "Curatorial concept, seven-room spatial narrative, and defined installations. Not visitor-tested.",
+          headerNextValidation:
+            "Spatial prototyping, engineering, and visitor observation",
+        },
+
+        role: "Exhibition concept, spatial experience and interaction design",
+        team: "Independent project",
+        ownership:
+          "Curatorial premise, seven-room visitor journey, physical interaction principles, accessibility approach, environmental identity and key installations",
+        methods: [
+          "Curatorial concept development",
+          "Spatial journey mapping",
+          "Interaction principle design",
+          "Accessibility-informed design",
+        ],
+        evidence:
+          "Curatorial concept, seven-room spatial narrative, and defined installations. Not visitor-tested.",
+        nextValidation:
+          "Spatial prototyping, engineering, and visitor observation",
+        metaItems: [
+          {
+            label: "Year",
+            value: "2026",
+          },
+          {
+            label: "Type",
+            value: "Private",
+          },
+          {
+            label: "Role",
+            value: "Exhibition concept, spatial experience and interaction design",
+          },
+          {
+            label: "Methods",
+            value: [
+              "Curatorial concept development",
+              "Spatial journey mapping",
+              "Interaction principle design",
+              "Accessibility-informed design",
+            ],
+          },
+          {
+            label: "Ownership",
+            value:
+              "Curatorial premise, seven-room visitor journey, physical interaction principles, accessibility approach, environmental identity and key installations",
+          },
+        ],
+      },
+
+      year: "2026",
+      role: "Exhibition concept, spatial experience and interaction design",
+      team: "Independent project",
+      ownership:
+        "Curatorial premise, seven-room visitor journey, physical interaction principles, accessibility approach, environmental identity and key installations",
+      methods: [
+        "Curatorial concept development",
+        "Spatial journey mapping",
+        "Interaction principle design",
+        "Accessibility-informed design",
+      ],
+    },
     {
       "slug": "headsUp",
       "title": "HeadsUp",
@@ -46,7 +395,7 @@ const projectsData = {
             "items": [
               {
                 "src": "../pngs/Projects/HeadsUp/iPhone 16 - Connect.jpg",
-                "alt": "HeadsUp amount to display "
+                "alt": "HeadsUp connect app screen"
               },
               {
                 "src": "../pngs/Projects/HeadsUp/iPhone 16 - Übertragen.jpg",
@@ -920,7 +1269,7 @@ const projectsData = {
           }
         ],
         "editorial": {
-          "color": "#D6FF00",
+          "color": "#a3a322",
           "variant": "routeMapEditorial",
           "thesis": "Subscription control should remain clear from plan selection to cancellation.",
           "scopeNote": "Independent unofficial redesign from 2026. Evidence comes from journey mapping and high-fidelity prototype states. No user testing was conducted.",

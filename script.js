@@ -506,7 +506,7 @@ function loadNavbar() {
         <nav class="nav-left" aria-label="Primary navigation">
           <a href="${base}index.html">Home</a>
           <a href="${base}projects.html">Works</a>
-          <a href="${base}about.html">About</a>
+          
         </nav>
 
         <div class="nav-center"></div>
@@ -544,7 +544,7 @@ function loadNavbar() {
       <nav class="menu-block menu-top" aria-label="Mobile navigation">
         <a href="${base}index.html">Home</a>
         <a href="${base}projects.html">Works</a>
-        <a href="${base}about.html">About</a>
+        
       </nav>
       <div class="menu-separator" aria-hidden="true"></div>
       <nav class="menu-block" aria-label="Mobile profile links">
@@ -1336,20 +1336,6 @@ function renderProjectText(project) {
 
   appendHeadingAndParagraph(textEl, s.takeawayTitle || "Takeaway", s.takeaway);
 
-  if (!isBlank(s.link)) {
-    const wrap = document.createElement("div");
-    wrap.className = "more-insights";
-
-    const link = document.createElement("a");
-    link.className = "more-insights-btn";
-    link.href = normalizePath(s.link, getBasePath());
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = "More insights";
-
-    wrap.appendChild(link);
-    textEl.appendChild(wrap);
-  }
 }
 
 function appendHeadingAndParagraph(root, headingText, paragraphText) {
@@ -4483,6 +4469,30 @@ function initProjectScrollIndicator() {
   window.addEventListener("resize", requestUpdate);
   window.addEventListener("load", requestUpdate);
 }
+
+function renderSelectedWorks() {
+  const grid = document.getElementById("selectedWorksGrid");
+  if (!grid) return;
+
+  const projects = getRenderableProjects();
+  if (!projects.length) {
+    warnLog("projectsData is not loaded or has no renderable projects");
+    return;
+  }
+
+  const slugs = ["dazn", "bodique", "DBNavigatorRedesign"];
+  const base = getBasePath();
+
+  removeChildren(grid);
+  const fragment = document.createDocumentFragment();
+
+  slugs.forEach(slug => {
+    const project = projects.find(p => normalizeSlug(p.slug) === normalizeSlug(slug));
+    if (project) fragment.appendChild(createProjectCard(project, base));
+  });
+
+  grid.appendChild(fragment);
+}
 /* INIT */
 document.addEventListener("DOMContentLoaded", () => {
   registerScrollTrigger();
@@ -4505,6 +4515,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const projectsLoaded = renderProjects();
   if (projectsLoaded) initFilters();
 
+  renderSelectedWorks(); 
   renderProjectDetail();
   renderOtherProjects();
   initCompareTabs();
