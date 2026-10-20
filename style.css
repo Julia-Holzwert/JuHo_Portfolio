@@ -746,17 +746,15 @@ body.darkmode .custom-video{--video-button-fill:#FFFFFF;--video-icon:#000000;--v
 .custom-video-media{width:100%;height:auto;min-height:320px;max-height:680px;display:block;object-fit:cover;object-position:center;border-radius:28px;background:var(--bg-soft);box-shadow:none}
 .custom-video::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:1;background:radial-gradient(circle at center,rgba(124,58,237,.16),rgba(0,0,0,.28));transition:opacity .35s ease}
 .custom-video.is-playing::after{opacity:0}
-.custom-video:not(.is-playing){cursor:none}
-.custom-video-play{--play-x:50%;--play-y:50%;--play-scale:.82;position:absolute;left:0;top:0;z-index:4;width:106px;height:106px;padding:0;border:0;outline:none;background:transparent;opacity:0;pointer-events:none;cursor:none;transform:translate3d(var(--play-x),var(--play-y),0) translate(-50%,-50%) scale(var(--play-scale));transition:opacity .18s ease,transform .38s cubic-bezier(.22,1,.36,1);will-change:transform,opacity}
-.custom-video.is-video-hovered:not(.is-playing) .custom-video-play{--play-scale:1;opacity:1;pointer-events:auto}
-.play-blob{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;border:0;border-radius:999px;background:var(--video-button-bg);color:var(--video-icon);box-shadow:var(--video-button-shadow);transform:translateZ(0);transition:box-shadow .28s ease,filter .28s ease,transform .3s cubic-bezier(.22,1,.36,1)}
+.custom-video-play{position:absolute;left:50%;top:50%;width:106px;height:106px;padding:0;border:0;outline:none;background:transparent;transform:translate(-50%,-50%);cursor:pointer;z-index:4}
+.play-blob{--pull-x:0px;--pull-y:0px;--blob-scale-x:1;--blob-scale-y:1;--blob-angle:0rad;--blob-angle-inverse:0rad;position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;border:0;border-radius:999px;background:var(--video-button-bg);color:var(--video-icon);box-shadow:var(--video-button-shadow);transform:translate(var(--pull-x),var(--pull-y)) rotate(var(--blob-angle)) scale(var(--blob-scale-x),var(--blob-scale-y)) rotate(var(--blob-angle-inverse));transition:box-shadow .28s ease,filter .28s ease}
 .play-blob::after{content:"";position:absolute;left:50%;bottom:0;width:165%;aspect-ratio:1;border-radius:50%;background:var(--video-button-fill);transform:translate(-50%,118%) scale(.94);transition:transform .72s cubic-bezier(.16,1,.3,1);z-index:1;pointer-events:none}
-.custom-video.is-video-hovered:not(.is-playing) .play-blob::after{transform:translate(-50%,18%) scale(1.06)}
-.custom-video.is-video-hovered:not(.is-playing) .play-blob{box-shadow:var(--video-button-shadow-hover)}
+.custom-video.is-video-hovered .play-blob::after{transform:translate(-50%,18%) scale(1.06)}
+.custom-video.is-fill-exiting .play-blob::after{transition:none;animation:video-play-fill-exit-up .78s cubic-bezier(.33,0,0,1) forwards}
+@keyframes video-play-fill-exit-up{0%{transform:translate(-50%,18%) scale(1.06)}100%{transform:translate(-50%,-132%) scale(1)}}
 .play-icon{position:relative;z-index:3;width:0;height:0;margin-left:7px;border-top:14px solid transparent;border-bottom:14px solid transparent;border-left:22px solid currentColor}
-.custom-video.is-playing .custom-video-play{--play-scale:.82;opacity:0;pointer-events:none}
+.custom-video.is-playing .custom-video-play{opacity:0;pointer-events:none;transform:translate(-50%,-50%) scale(.92);transition:opacity .25s ease,transform .25s ease}
 .custom-video-play:focus{outline:none}
-.custom-video-play:focus-visible{--play-scale:1;opacity:1;pointer-events:auto}
 .custom-video-play:focus-visible .play-blob{box-shadow:0 0 0 4px rgba(167,139,250,.35),var(--video-button-shadow-hover)}
 
 /* CUSTOM VIDEO CONTROLS*/
@@ -785,11 +783,6 @@ body.darkmode .custom-video{--video-button-fill:#FFFFFF;--video-icon:#000000;--v
 .volume-slider::-webkit-slider-thumb{appearance:none;width:15px;height:15px;border-radius:50%;background:linear-gradient(180deg,#C4B5FD,#7C3AED);box-shadow:0 4px 10px rgba(0,0,0,.25)}
 .volume-slider::-moz-range-thumb{width:15px;height:15px;border:0;border-radius:50%;background:linear-gradient(180deg,#C4B5FD,#7C3AED);box-shadow:0 4px 10px rgba(0,0,0,.25)}
 
-@media (hover:none){
-  .custom-video,.custom-video:not(.is-playing){cursor:auto}
-  .custom-video-play{--play-x:50%;--play-y:50%;--play-scale:1;opacity:1;pointer-events:auto;cursor:pointer}
-  .custom-video.is-playing .custom-video-play{opacity:0;pointer-events:none}
-}
 /* FOOTER*/
 .footer-section{background:var(--accent-strong);margin-top:var(--project-footer-gap);position:relative}
 .footer-content{text-align:center;padding:4rem 2rem;position:relative;z-index:2}
@@ -1918,6 +1911,8 @@ body.darkmode .other-projects-section .project-card-tag{
   place-items:center;
   padding:clamp(18px,4vw,64px);
   background:rgba(0,0,0,.72);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
   cursor:zoom-out;
   opacity:0;
   pointer-events:none;
@@ -1930,32 +1925,28 @@ body.darkmode .other-projects-section .project-card-tag{
 }
 
 .project-image-preview-inner{
-  width:auto;
-  height:auto;
-  max-width:100%;
-  max-height:100%;
+  width:min(1440px,100%);
+  max-height:min(86vh,900px);
   display:grid;
   place-items:center;
-  background:transparent;
-  border:0;
-  box-shadow:none;
-  overflow:visible;
+  background:var(--bg-main);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 32px 90px rgba(0,0,0,.38);
+  overflow:hidden;
 }
 
 .project-image-preview-img{
   display:block;
-  width:auto;
-  height:auto;
-  max-width:calc(100vw - clamp(36px,8vw,128px));
-  max-height:calc(100vh - clamp(36px,8vw,128px));
+  width:100%;
+  height:100%;
+  max-height:min(86vh,900px);
   object-fit:contain;
   object-position:center;
-  background:transparent;
-  border:0;
-  border-radius:0;
-  box-shadow:none;
 }
 
+body.darkmode .project-image-preview-inner{
+  background:#0D0B14;
+}
 
 body.is-project-image-preview-open{
   overflow:hidden;
@@ -1976,8 +1967,8 @@ body.is-project-image-preview-open .navbar{
   cursor:zoom-in;
 }
 
-/*Leicher glow um die Routenpunkte*/
-body[data-project-slug] .case-story-section[data-editorial-variant="routeMapEditorial"] .case-block-route-station{box-shadow:0 0 8px color-mix(in srgb, var(--db-route-red) 45%, transparent),0 0 18px color-mix(in srgb, var(--db-route-red) 20%, transparent);}
+
+
 
 /* DB CASE MEDIA FINAL*/
 body[data-project-slug="DBNavigatorRedesign"] .case-story-section[data-editorial-variant="routeMapEditorial"] .case-support-visuals{display:none}
