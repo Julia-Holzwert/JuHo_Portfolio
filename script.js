@@ -471,7 +471,7 @@ function loadFooter() {
   links.innerHTML = `
     <a href="mailto:julia.h.great@gmail.com">Contact</a>
     <a href="https://www.linkedin.com/in/julia-holzwert/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-    <a href="${base}Lebenslauf-18.03.pdf" target="_blank" rel="noopener noreferrer">CV</a>
+    <a href="${base}Lebenslauf - 20.10" target="_blank" rel="noopener noreferrer">CV</a>
     <a href="#top" data-footer-top>Back to top</a>
   `;
 
@@ -512,7 +512,7 @@ function loadNavbar() {
         <div class="nav-center"></div>
 
         <nav class="nav-right" aria-label="Profile links and theme">
-          <a href="${base}Lebenslauf-18.03.pdf" target="_blank" rel="noopener noreferrer">CV</a>
+          <a href="${base}Lebenslauf - 20.10" target="_blank" rel="noopener noreferrer">CV</a>
           <a href="https://www.linkedin.com/in/julia-holzwert/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
           <a href="mailto:julia.h.great@gmail.com">Contact</a>
 
@@ -547,7 +547,7 @@ function loadNavbar() {
       </nav>
       <div class="menu-separator" aria-hidden="true"></div>
       <nav class="menu-block" aria-label="Mobile profile links">
-        <a href="${base}Lebenslauf-18.03.pdf" target="_blank" rel="noopener noreferrer">CV</a>
+        <a href="${base}Lebenslauf - 20.10" target="_blank" rel="noopener noreferrer">CV</a>
         <a href="https://www.linkedin.com/in/julia-holzwert/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
         <a href="mailto:julia.h.great@gmail.com">Contact</a>
       </nav>
